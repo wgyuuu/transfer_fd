@@ -16,7 +16,7 @@ int socket_tcp(uint16_t port)
 
     int reuse = 1, alive = 1;
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&reuse, sizeof(int));
-    setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (const void *)&alive, sizeof(int));
+    // setsockopt(sockfd, SOL_SOCKET, SO_KEEPALIVE, (const void *)&alive, sizeof(int));
 
     if (bind(sockfd, &sockaddr, sizeof(struct sockaddr_in)) == -1)
     {

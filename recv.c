@@ -4,16 +4,23 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <errno.h>
+#include <signal.h>
 
 #include "nsocket.h"
 
 void check_sock(int);
+static void sig_process(int);
 
 int main(void)
 {
+    if (signal(SIGINT, sig_process) == SIG_ERR)
+        printf("signal error.\n");
+
     dup(STDIN_FILENO);
 
-    int server_fd = socket_unix("/tmp/fd.sock");
+    const char *unix_path = "/tmp/fd.sock";
+    unlink(unix_path);
+    int server_fd = socket_unix(unix_path);
     printf("server_fd:%d.\n", server_fd);
 
     int cli_fd;
@@ -35,7 +42,7 @@ int main(void)
         } cmsg;
 
         memset(&cmsg, 0, sizeof(cmsg));
-        
+
         char buf[2];
         struct iovec iov[1];
         iov[0].iov_base = buf;
@@ -58,7 +65,15 @@ int main(void)
         } else 
         {
             printf("recvmsg: %s.\n", buf);
+            char *recv_buf = "recv ok!";
+            n = send(cli_fd, recv_buf, strlen(recv_buf), 0);
+            if (n == -1)
+            {
+                printf("send to client error, err:%d strerrno:%s.\n", errno, strerror(errno));
+            }
         }
+
+        close(cli_fd);
 
         memcpy(&read_fd, CMSG_DATA(&cmsg.cm), sizeof(int));
         printf("read_fd:%d\n", read_fd);
@@ -67,6 +82,7 @@ int main(void)
             check_sock(read_fd);
     }
 }
+
 
 void check_sock(int serv_fd) 
 {
@@ -80,9 +96,24 @@ void check_sock(int serv_fd)
         exit(1);
     }
 
-    char data[] = "wo ying le.";
-    send(cli_fd, data, sizeof(data), MSG_OOB);
+    char data[] = "wo ying le.\n";
+    // MSG_OOB out-of-band 写入一个单子节到下一个包，使其成为紧急数据
+    int n = send(cli_fd, data, sizeof(data), 0);
+    if (n == -1)
+    {
+        printf("send to client error, err:%d.\n", errno);
+        return;
+    }
 
-    return 0;
+    printf("send to client %d bytes.\n", n);
+    close(cli_fd);
+
+    close(serv_fd);
 }
 
+
+void sig_process(int signo)
+{
+    printf("signal number: %d.\n", signo);
+    exit(1);
+}

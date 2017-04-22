@@ -68,7 +68,6 @@ void send_fd(int fd)
     int cli_fd = conn_unix("/tmp/fd.sock");
 
     int n;
-    // n = send(cli_fd, "aaaaa", 5, MSG_OOB);
     n = sendmsg(cli_fd, &msg, 0);
     if (n == -1) {
         printf("send error, cli_fd:%d, err:%d\n", cli_fd, errno);
